@@ -1,9 +1,16 @@
-//Viacheslav Pototskyi - 241ADB183
-//Project github: https://github.com/grushello/proga1
-//Nothing specific for compilation (gcc calc.c)
+// Viacheslav Pototskyi - 241ADB183
+// Project github: https://github.com/grushello/proga1
 
-//The program is multiplatform (windows, linux)
-//Everything for grade 10 is implemented, the project only lacks unary operators
+// Compilation:
+// On Windows: gcc calc.c
+// On Linux: gcc calc.c -lm 
+
+// The program is multiplatform (windows, linux)
+// Everything for grade 10 is implemented, the project only lacks unary operators
+// Misunderstood error position convention, I save not global error position, but position in line. I can change it in 5-10 mins if needed 
+// All operation errors return position of the operation
+// If lacking closing bracket, the error pos is set to last opened bracket pos
+// No limit for file size, as long as you have free RAM everything is okay
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -48,7 +55,7 @@
 
 enum tokenType
 {
-    INVALID, NUMBER, PLUS, MINUS, STAR, SLASH, POW, LPAREN, RPAREN, EOL
+    INVALID, NUMBER, PLUS, MINUS, STAR, SLASH, POW, LPAREN, RPAREN, EOL, COMMENT
 };
 struct Token
 {
@@ -153,6 +160,14 @@ void tokenize(const char* expression )
     {
         // skipping spaces
         if(isspace((unsigned char)expression[i])) { i++; continue; }
+        //instantly ending line after encountering #
+        if(expression[i] == '#')
+        {
+            tokens[tlength].type == COMMENT;
+            tokens[tlength].pos == i;
+            i = length;
+            break;
+        }
 
         int startPos = (int)i + 1;
         //reading a number
@@ -229,17 +244,17 @@ double parsePrimary()
             tokenIndex++;
             return val;
         }
-        else
-        {
-            errorPos = tokens[tokenIndex].pos;
-            return 0;
-        }
-    }
-    else
-    {
+        // checking for unclosed braces
         errorPos = tokens[tokenIndex].pos;
+        if (tokens[tokenIndex].type == EOL && tokenIndex > 0)
+            errorPos = tokens[tokenIndex - 1].pos;
         return 0;
     }
+    //checking for unsolved endline cases (like 5+ or 4*)
+    if (tokens[tokenIndex].type == EOL && tokenIndex > 0)
+        errorPos = tokens[tokenIndex - 1].pos;
+    else errorPos = tokens[tokenIndex].pos;
+        return 0;
 }
 
 double parsePower()
@@ -259,6 +274,10 @@ double parsePower()
 
 double parseTerm()
 {
+    if(tokens[tokenCount].type == COMMENT)
+    {
+        return 0;
+    }
     double left = parsePower();
     if (errorPos != -1) return 0;
     while (tokens[tokenIndex].type == STAR || tokens[tokenIndex].type == SLASH)
